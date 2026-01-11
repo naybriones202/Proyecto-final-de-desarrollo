@@ -1,7 +1,13 @@
+import 'dotenv/config';
 import express from "express";
 import cors from "cors";
 import { pool } from "./db.js";
-import bcrypt from 'bcrypt';
+import bcrypt from "bcryptjs";
+
+pool.query("SELECT 1")
+  .then(() => console.log("✅ Conectado a Supabase"))
+  .catch(err => console.error("❌ Error de conexión:", err));
+
 
 const app = express();
 app.use(cors());
@@ -11,7 +17,7 @@ app.use(express.json());
 //      RUTAS DE USUARIOS
 // ==========================================
 
-// 1. Crear Usuario (CON ENCRIPTACIÓN)
+// 1. Crear Usuario (CON ENCRIPTACIÓN Y VALIDACIÓN)
 app.post("/usuarios", async (req, res) => {
   try {
     const { cedula, nombre, clave } = req.body;
@@ -25,14 +31,13 @@ app.post("/usuarios", async (req, res) => {
     const salt = await bcrypt.genSalt(10); 
     const claveEncriptada = await bcrypt.hash(clave, salt);
     
-    // Guardamos la 'claveEncriptada' en la base de datos
+    // Guardamos en la base de datos
     const query = "INSERT INTO usuarios (cedula, nombre, clave) VALUES ($1, $2, $3) RETURNING *";
     const result = await pool.query(query, [cedula, nombre, claveEncriptada]);
     
     res.json({ msg: "Usuario registrado", data: result.rows[0] });
 
   } catch (error) {
-
     if (error.code === '23505') {
         return res.status(400).json({ msg: "Esa cédula ya está registrada" });
     }
@@ -55,7 +60,7 @@ app.get("/usuarios/:id", async (req, res) => {
 // 3. Ver todos los usuarios
 app.get("/usuarios", async (req, res) => {
   try {
-    const result = await pool.query("SELECT * FROM usuarios");
+    const result = await pool.query("SELECT * FROM usuarios ORDER BY id ASC");
     res.json(result.rows);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -68,23 +73,16 @@ app.put("/usuarios/:id", async (req, res) => {
     const { id } = req.params;
     const { cedula, nombre, clave } = req.body;
     
-    // NOTA: Si editas la clave aquí, idealmente también deberías encriptarla de nuevo.
-    // Por simplicidad para la expo, asumimos que aquí llega o se maneja directo, 
-    // pero si editas la clave desde el front, asegúrate de enviar la nueva.
-    
-    // Si quieres que al editar también encripte, descomenta esto:
-    /*
-    const salt = await bcrypt.genSalt(10);
-    const claveNueva = await bcrypt.hash(clave, salt);
-    */
-    // Y usa claveNueva en el query. Por ahora lo dejo como lo tenías para no romperte nada más:
-
+    // Si quisieras re-encriptar la clave al editar, hazlo aquí.
+    // Por ahora mantenemos la lógica simple que tenías.
     const result = await pool.query(
       "UPDATE usuarios SET cedula = $1, nombre = $2, clave = $3 WHERE id = $4 RETURNING *",
       [cedula, nombre, clave, id]
     );
+
     if (result.rows.length === 0) return res.status(404).json({ msg: "Usuario no encontrado" });
     res.json({ msg: "Usuario actualizado", data: result.rows[0] });
+
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -110,12 +108,20 @@ app.delete("/usuarios/:id", async (req, res) => {
 app.post("/materias", async (req, res) => {
   try {
     const { codigo, nombre } = req.body;
+    
+    if (!codigo || !nombre) {
+      return res.status(400).json({ msg: "El código y nombre son obligatorios" });
+    }
+
     const result = await pool.query(
       "INSERT INTO materias (codigo, nombre) VALUES ($1, $2) RETURNING *",
       [codigo, nombre]
     );
     res.json(result.rows[0]);
   } catch (error) {
+    if (error.code === '23505') {
+        return res.status(400).json({ msg: "El código de materia ya existe" });
+    }
     res.status(500).json({ error: error.message });
   }
 });
@@ -123,7 +129,7 @@ app.post("/materias", async (req, res) => {
 // 2. Ver todas las materias
 app.get("/materias", async (req, res) => {
   try {
-    const result = await pool.query("SELECT * FROM materias");
+    const result = await pool.query("SELECT * FROM materias ORDER BY id ASC");
     res.json(result.rows);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -139,7 +145,6 @@ app.get("/materias/:id", async (req, res) => {
     if (result.rows.length === 0) {
       return res.status(404).json({ msg: "Materia no encontrada" });
     }
-    
     res.json(result.rows[0]);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -157,10 +162,7 @@ app.put("/materias/:id", async (req, res) => {
       [codigo, nombre, id]
     );
     
-    if (result.rows.length === 0) {
-      return res.status(404).json({ msg: "Materia no encontrada" });
-    }
-    
+    if (result.rows.length === 0) return res.status(404).json({ msg: "Materia no encontrada" });
     res.json({ msg: "Materia actualizada", data: result.rows[0] });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -177,6 +179,136 @@ app.delete("/materias/:id", async (req, res) => {
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
+});
+
+// ==========================================
+//      RUTAS DE ESTUDIANTES (NUEVO)
+// ==========================================
+
+// 1. Ver todos los estudiantes
+app.get("/estudiantes", async (req, res) => {
+  try {
+    // Ordenamos por nombre alfabéticamente
+    const result = await pool.query("SELECT * FROM estudiantes ORDER BY nombre ASC");
+    res.json(result.rows);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 2. Crear Estudiante
+app.post("/estudiantes", async (req, res) => {
+  try {
+    const { cedula, nombre } = req.body;
+    
+    // Validación de campos vacíos
+    if (!cedula || !nombre) {
+        return res.status(400).json({ msg: "Cédula y Nombre son obligatorios" });
+    }
+
+    const result = await pool.query(
+      "INSERT INTO estudiantes (cedula, nombre) VALUES ($1, $2) RETURNING *",
+      [cedula, nombre]
+    );
+    res.json(result.rows[0]);
+
+  } catch (error) {
+    // Error de duplicidad (Unique key violation)
+    if (error.code === '23505') {
+        return res.status(400).json({ msg: "Ya existe un estudiante con esa cédula" });
+    }
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 3. Eliminar Estudiante
+app.delete("/estudiantes/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await pool.query("DELETE FROM estudiantes WHERE id = $1 RETURNING *", [id]);
+    
+    if (result.rows.length === 0) {
+        return res.status(404).json({ msg: "Estudiante no encontrado" });
+    }
+    res.json({ msg: "Estudiante eliminado correctamente" });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ==========================================
+//      RUTAS DE NOTAS (NUEVO)
+// ==========================================
+
+// 1. Ver Notas
+app.get("/notas", async (req, res) => {
+  try {
+    // Hacemos JOIN para traer los nombres en lugar de solo los IDs
+    const query = `
+      SELECT n.id, e.nombre as estudiante, m.nombre as materia, n.valor 
+      FROM notas n
+      JOIN estudiantes e ON n.estudiante_id = e.id
+      JOIN materias m ON n.materia_id = m.id
+      ORDER BY n.id DESC
+    `;
+    const result = await pool.query(query);
+    res.json(result.rows);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 2. Ingresar o Actualizar Nota (Lógica Upsert manual)
+app.post("/notas", async (req, res) => {
+  try {
+    const { estudiante_id, materia_id, valor } = req.body;
+
+    // Validaciones
+    if (!estudiante_id || !materia_id || valor === undefined) {
+        return res.status(400).json({ msg: "Faltan datos para la nota" });
+    }
+
+    // Verificar si ya existe nota para ese alumno en esa materia
+    const check = await pool.query(
+      "SELECT * FROM notas WHERE estudiante_id = $1 AND materia_id = $2",
+      [estudiante_id, materia_id]
+    );
+
+    if (check.rows.length > 0) {
+      // --- UPDATE: Si existe, actualizamos la nota ---
+      await pool.query(
+        "UPDATE notas SET valor = $1 WHERE estudiante_id = $2 AND materia_id = $3",
+        [valor, estudiante_id, materia_id]
+      );
+      res.json({ msg: "Nota actualizada correctamente" });
+    } else {
+      // --- INSERT: Si no existe, la creamos ---
+      await pool.query(
+        "INSERT INTO notas (estudiante_id, materia_id, valor) VALUES ($1, $2, $3)",
+        [estudiante_id, materia_id, valor]
+      );
+      res.json({ msg: "Nota registrada correctamente" });
+    }
+
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+  // 3. Eliminar Nota (AGREGA ESTO EN TU INDEX.JS)
+// RUTA PARA BORRAR NOTAS
+app.delete("/notas/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    // Borramos la nota con ese ID
+    const result = await pool.query("DELETE FROM notas WHERE id = $1 RETURNING *", [id]);
+    
+    if (result.rows.length === 0) {
+        return res.status(404).json({ msg: "Nota no encontrada" });
+    }
+    res.json({ msg: "Calificación eliminada" });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
 });
 
 // ==========================================
@@ -229,9 +361,9 @@ app.post("/login", async (req, res) => {
 // ==========================================
 async function crearAdminPorDefecto() {
   try {
-    const cedulaAdmin = "1316009974"; // Tu cédula
-    const nombreAdmin = "Juan Zambrano";
-    const claveAdmin = "admin2025"; // Contraseña que usaras en el Login
+    const cedulaAdmin = "1314741289"; // Tu cédula
+    const nombreAdmin = "Ezequiel Rodriguez"; // Tu nombre
+    const claveAdmin = "admin04"; // Contraseña de acceso
 
     // Verificar si ya existe el usuario
     const check = await pool.query("SELECT * FROM usuarios WHERE cedula = $1", [cedulaAdmin]);
@@ -249,7 +381,7 @@ async function crearAdminPorDefecto() {
         [cedulaAdmin, nombreAdmin, claveEncriptada]
       );
       
-      console.log(`✅ Usuario Administrador creado: Cédula ${cedulaAdmin} / Clave ${claveAdmin}`);
+      console.log(`✅ Usuario Administrador creado: Cédula ${cedulaAdmin}`);
     } else {
       console.log("ℹ️ El sistema ya tiene administrador. Inicio normal.");
     }
@@ -264,4 +396,8 @@ crearAdminPorDefecto();
 // ==========================================
 //      SERVIDOR
 // ==========================================
-app.listen(3000, () => console.log("Servidor corriendo en http://localhost:3000"));
+const PORT = process.env.PORT || 3000;
+
+app.listen(PORT, () => {
+  console.log(`🚀 Servidor corriendo en el puerto ${PORT}`);
+});
