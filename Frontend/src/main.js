@@ -1,4 +1,4 @@
-const API = 'http://localhost:3000';
+const API = 'https://proyecto-final-de-desarrollo.onrender.com';
 
 // Elementos Globales
 const loginSection = document.getElementById('login-section');
@@ -223,7 +223,7 @@ document.getElementById('form-estudiante').addEventListener('submit', async (e) 
     });
     Swal.fire('Listo', 'Estudiante registrado', 'success');
     document.getElementById('form-estudiante').reset();
-    cargarEstudiantes();
+    await cargarEstudiantes();
 });
 
 window.borrarEstudiante = async (id) => {
