@@ -266,31 +266,31 @@ ORDER BY n.id DESC
 // 2. Ingresar o Actualizar Nota (Lógica Upsert manual)
 app.post("/notas", async (req, res) => {
   try {
-    const { estudiante_id, asignatura_id, nota } = req.body;
+    const { estudiante_id, materia_id, nota } = req.body;
 
     // Validaciones
-    if (!estudiante_id || !asignatura_id || nota === undefined) {
+    if (!estudiante_id || !materia_id || nota === undefined) {
         return res.status(400).json({ msg: "Faltan datos para la nota" });
     }
 
     // Verificar si ya existe nota para ese alumno en esa materia
     const check = await pool.query(
-      "SELECT * FROM notas WHERE estudiante_id = $1 AND asignatura_id = $2",
-      [estudiante_id, asignatura_id]
+      "SELECT * FROM notas WHERE estudiante_id = $1 AND materia_id = $2",
+      [estudiante_id, materia_id]
     );
 
     if (check.rows.length > 0) {
       // --- UPDATE: Si existe, actualizamos la nota ---
       await pool.query(
-        "UPDATE notas SET nota = $1 WHERE estudiante_id = $2 AND asignatura_id = $3",
-        [nota, estudiante_id, asignatura_id]
+        "UPDATE notas SET nota = $1 WHERE estudiante_id = $2 AND materia_id = $3",
+        [nota, estudiante_id, materia_id]
       );
       res.json({ msg: "Nota actualizada correctamente" });
     } else {
       // --- INSERT: Si no existe, la creamos ---
       await pool.query(
-        "INSERT INTO notas (estudiante_id, asignatura_id, nota) VALUES ($1, $2, $3)",
-        [estudiante_id, asignatura_id, nota]
+        "INSERT INTO notas (estudiante_id, materia_id, nota) VALUES ($1, $2, $3)",
+        [estudiante_id, materia_id, nota]
       );
       res.json({ msg: "Nota registrada correctamente" });
     }
