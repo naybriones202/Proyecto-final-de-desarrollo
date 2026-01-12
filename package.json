@@ -1,8 +1,19 @@
 {
+  "name": "package.json",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "typescript": "~5.9.3",
+    "vite": "^7.2.4"
+  },
   "dependencies": {
-    "@supabase/supabase-js": "^2.90.1",
-    "bcrypt": "^6.0.0",
-    "dotenv": "^17.2.3",
-    "pg": "^8.16.3"
+    "bootstrap": "^5.3.8",
+    "cors": "^2.8.5"
   }
 }
