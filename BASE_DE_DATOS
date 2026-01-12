@@ -1,0 +1,59 @@
+-- 1. Materia (Debe ir primero porque 'notas' la necesita)
+CREATE TABLE materia (
+  codigo SERIAL PRIMARY KEY,
+  nombre VARCHAR(100) NOT NULL
+);
+INSERT INTO materia (nombre) VALUES
+('Matemáticas'),
+('Programación'),
+('Redes de Computadoras'),
+('Bases de Datos'),
+('Sistemas Operativos');
+-- 2. Usuarios (Tabla base para profesores y estudiantes)
+CREATE TABLE usuarios (
+    id SERIAL PRIMARY KEY,
+    cedula VARCHAR(20) NOT NULL UNIQUE,
+    nombre VARCHAR(100) NOT NULL,
+    clave VARCHAR(255) NOT NULL,
+    rol VARCHAR(20) NOT NULL,
+    CONSTRAINT check_rol CHECK (rol IN ('estudiante', 'profesor'))
+);
+
+INSERT INTO usuarios (cedula, nombre, clave, rol)
+VALUES 
+  -- Usuario 1: Un Estudiante
+  ('1001', 'Pepito Estudiante', '1234', 'estudiante'),
+
+  -- Usuario 2: Otro Estudiante
+  ('1002', 'Maria Estudiante',  '1234', 'estudiante'),
+
+  -- Usuario 3: Un Profesor
+  ('2001', 'Profe Jirafales',   '1234', 'profesor');
+
+-- 3. Profesores (Vinculado a usuarios)
+CREATE TABLE profesores (
+    id SERIAL PRIMARY KEY,
+    usuario_id INT NOT NULL UNIQUE,
+    FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
+);
+
+-- 4. Estudiantes (Vinculado a usuarios)
+CREATE TABLE estudiantes (
+    id SERIAL PRIMARY KEY,
+    usuario_id INT NOT NULL UNIQUE,
+    FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
+);
+
+-- 5. Notas (Vinculado a todas las anteriores)
+CREATE TABLE notas (
+    id SERIAL PRIMARY KEY,
+    estudiante_id INT NOT NULL,
+    profesor_id INT NOT NULL,
+    materia_codigo INT NOT NULL,
+    nota NUMERIC(4,2) NOT NULL CHECK (nota >= 0 AND nota <= 10),
+    fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (estudiante_id) REFERENCES estudiantes(id) ON DELETE CASCADE,
+    FOREIGN KEY (profesor_id) REFERENCES profesores(id) ON DELETE CASCADE,
+    FOREIGN KEY (materia_codigo) REFERENCES materia(codigo) ON DELETE CASCADE
+);
