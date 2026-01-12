@@ -1,4 +1,4 @@
-const API = 'http://localhost:3000';
+const API = 'https://proyecto-final-de-desarrollo.onrender.com';
 
 // Elementos Globales
 const loginSection = document.getElementById('login-section');
