@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Panel Profesor</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+
+<body class="bg-light">
+
+<div class="container mt-4">
+
+  <div id="vistaLogin" class="vh-100 d-flex flex-column justify-content-center align-items-center">
+    <h3 class="mb-3">Acceso Profesores</h3>
+
+    <form id="formLogin" style="max-width:300px;width:100%;">
+      <input id="loginCedula" class="form-control mb-2" placeholder="Cédula">
+      <input id="loginClave" type="password" class="form-control mb-2" placeholder="Clave">
+      <button class="btn btn-primary w-100">Ingresar</button>
+      <p id="loginError" class="text-danger mt-2"></p>
+    </form>
+  </div>
+
+  <div id="vistaDashboard" class="d-none">
+    <div class="d-flex justify-content-between mb-4">
+      <h3>Bienvenido, <span id="nombreProfe"></span></h3>
+      <button id="btnSalir" class="btn btn-outline-danger">Cerrar sesión</button>
+    </div>
+
+    <div class="card p-4 mb-4">
+      <h4>Registrar Nota</h4>
+
+      <div class="row g-2">
+        <div class="col-md-4">
+          <select id="selectEstudiante" class="form-select"></select>
+        </div>
+
+        <div class="col-md-4">
+          <select id="selectMateria" class="form-select"></select>
+        </div>
+
+        <div class="col-md-2">
+          <input id="inputNota" type="number" class="form-control" min="0" max="10">
+        </div>
+
+        <div class="col-md-2">
+          <button class="btn btn-success w-100" onclick="registrarNota()">Guardar</button>
+        </div>
+      </div>
+    </div>
+
+    <table class="table table-striped">
+      <thead>
+        <tr>
+          <th>Estudiante</th>
+          <th>Materia</th>
+          <th>Nota</th>
+          <th>Fecha</th>
+        </tr>
+      </thead>
+      <tbody id="tablaNotas"></tbody>
+    </table>
+  </div>
+
+</div>
+
+<!-- VITE -->
+<script type="module" src="/src/main.js"></script>
+</body>
+</html>
