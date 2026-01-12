@@ -1,12 +1,18 @@
-const API = 'https://proyecto-final-de-desarrollo.onrender.com';
+const API = 'http://localhost:3000';
 
 // Elementos Globales
 const loginSection = document.getElementById('login-section');
 const dashboardSection = document.getElementById('dashboard-section');
 
 // --- LOGIN ---
+document.getElementById('form-login').addEventListener('submit', (e) => {
+  e.preventDefault();
+  console.log('LOGIN SUBMIT DISPARADO');
+});
 document.getElementById('form-login').addEventListener('submit', async (e) => {
   e.preventDefault();
+  console.log('LOGIN SUBMIT OK');
+
   const cedula = document.getElementById('login-cedula').value;
   const clave = document.getElementById('login-clave').value;
 
@@ -239,25 +245,37 @@ window.limpiarFormEstudiante = () => {
 
 // --- NOTAS (Con botón Eliminar) ---
 async function cargarNotas() {
-    const res = await fetch(`${API}/notas`);
-    const notas = await res.json();
-    const tabla = document.getElementById('tabla-notas-body');
-    tabla.innerHTML = ''; 
-    
-    notas.forEach(n => {
-        tabla.innerHTML += `
-        <tr>
-            <td class="ps-4 fw-bold text-muted">${n.estudiante}</td>
-            <td>${n.materia}</td>
-            <td><span class="badge bg-warning text-dark fs-6">${n.valor}</span></td>
-            
-            <td class="text-end pe-4">
-                <button class="btn btn-sm btn-outline-danger" onclick="borrarNota('${n.id}')">
-                    <i class="bi bi-trash"></i>
-                </button>
-            </td>
-        </tr>`;
-    });
+  const res = await fetch(`${API}/notas`);
+  const notas = await res.json();
+
+  // 🔴 PROTECCIÓN CRÍTICA
+  if (!Array.isArray(notas)) {
+    console.error('Respuesta /notas NO es un array:', notas);
+    return;
+  }
+
+  const tabla = document.getElementById('tabla-notas-body');
+  tabla.innerHTML = '';
+
+  notas.forEach(n => {
+    tabla.innerHTML += `
+      <tr>
+        <td class="ps-4 fw-bold text-muted">${n.estudiante}</td>
+        <td>${n.materia}</td>
+        <td>
+          <span class="badge bg-warning text-dark fs-6">
+            ${n.nota}
+          </span>
+        </td>
+        <td class="text-end pe-4">
+          <button class="btn btn-sm btn-outline-danger"
+                  onclick="borrarNota('${n.id}')">
+            <i class="bi bi-trash"></i>
+          </button>
+        </td>
+      </tr>
+    `;
+  });
 }
 
 // LÓGICA PARA BORRAR NOTAS
@@ -294,7 +312,7 @@ document.getElementById('form-notas').addEventListener('submit', async (e) => {
         body: JSON.stringify({
             estudiante_id: document.getElementById('nota-estudiante').value,
             materia_id: document.getElementById('nota-materia').value,
-            valor: document.getElementById('nota-valor').value
+            nota: document.getElementById('nota-valor').value
         })
     });
     

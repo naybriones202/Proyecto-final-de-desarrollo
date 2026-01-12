@@ -237,57 +237,58 @@ app.delete("/estudiantes/:id", async (req, res) => {
 });
 
 // ==========================================
-//      RUTAS DE NOTAS (NUEVO)
+//           RUTAS DE NOTAS
 // ==========================================
 
-// 1. Ver Notas
+// 1. VER NOTAS
 app.get("/notas", async (req, res) => {
   try {
-    // Hacemos JOIN para traer los nombres en lugar de solo los IDs
     const query = `
-SELECT 
-  n.id, 
-  e.nombre AS estudiante, 
-  m.nombre AS materia, 
-  n.nota
-FROM notas n
-JOIN estudiantes e ON n.estudiante_id = e.id
-JOIN materias m ON n.asignatura_id = m.id
-ORDER BY n.id DESC
-`;
+      SELECT 
+        n.id,
+        e.nombre AS estudiante,
+        m.nombre AS materia,
+        n.nota
+      FROM notas n
+      JOIN estudiantes e ON n.estudiante_id = e.id
+      JOIN materias m ON n.materia_id = m.id
+      ORDER BY n.id DESC
+    `;
 
     const result = await pool.query(query);
     res.json(result.rows);
   } catch (error) {
+    console.error("ERROR GET /notas:", error);
     res.status(500).json({ error: error.message });
   }
 });
 
-// 2. Ingresar o Actualizar Nota (Lógica Upsert manual)
+
+// 2. INSERTAR O ACTUALIZAR NOTA (UPSERT MANUAL)
 app.post("/notas", async (req, res) => {
   try {
     const { estudiante_id, materia_id, nota } = req.body;
 
-    // Validaciones
+    // Validación
     if (!estudiante_id || !materia_id || nota === undefined) {
-        return res.status(400).json({ msg: "Faltan datos para la nota" });
+      return res.status(400).json({ msg: "Faltan datos para la nota" });
     }
 
-    // Verificar si ya existe nota para ese alumno en esa materia
+    // Verificar si ya existe
     const check = await pool.query(
-      "SELECT * FROM notas WHERE estudiante_id = $1 AND materia_id = $2",
+      "SELECT id FROM notas WHERE estudiante_id = $1 AND materia_id = $2",
       [estudiante_id, materia_id]
     );
 
     if (check.rows.length > 0) {
-      // --- UPDATE: Si existe, actualizamos la nota ---
+      // UPDATE
       await pool.query(
         "UPDATE notas SET nota = $1 WHERE estudiante_id = $2 AND materia_id = $3",
         [nota, estudiante_id, materia_id]
       );
       res.json({ msg: "Nota actualizada correctamente" });
     } else {
-      // --- INSERT: Si no existe, la creamos ---
+      // INSERT
       await pool.query(
         "INSERT INTO notas (estudiante_id, materia_id, nota) VALUES ($1, $2, $3)",
         [estudiante_id, materia_id, nota]
@@ -296,25 +297,34 @@ app.post("/notas", async (req, res) => {
     }
 
   } catch (error) {
+    console.error("ERROR POST /notas:", error);
     res.status(500).json({ error: error.message });
   }
-  // 3. Eliminar Nota (AGREGA ESTO EN TU INDEX.JS)
-// RUTA PARA BORRAR NOTAS
+});
+
+
+// 3. ELIMINAR NOTA
 app.delete("/notas/:id", async (req, res) => {
   try {
     const { id } = req.params;
-    // Borramos la nota con ese ID
-    const result = await pool.query("DELETE FROM notas WHERE id = $1 RETURNING *", [id]);
-    
+
+    const result = await pool.query(
+      "DELETE FROM notas WHERE id = $1 RETURNING *",
+      [id]
+    );
+
     if (result.rows.length === 0) {
-        return res.status(404).json({ msg: "Nota no encontrada" });
+      return res.status(404).json({ msg: "Nota no encontrada" });
     }
-    res.json({ msg: "Calificación eliminada" });
+
+    res.json({ msg: "Nota eliminada correctamente" });
+
   } catch (error) {
+    console.error("ERROR DELETE /notas:", error);
     res.status(500).json({ error: error.message });
   }
 });
-});
+
 
 // ==========================================
 //      RUTA DE LOGIN (AUTENTICACIÓN)
